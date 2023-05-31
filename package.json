@@ -1,5 +1,5 @@
 {
-  "name": "@toruslabs/torus.js",
+  "name": "@allaccessone/allaccessone.js",
   "version": "6.3.2",
   "description": "Handle communication with torus nodes",
   "main": "dist/torusUtils.cjs.js",
