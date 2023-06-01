@@ -1,7 +1,7 @@
 {
   "name": "@allaccessone/allaccessone.js",
   "version": "6.3.2",
-  "description": "Handle communication with torus nodes",
+  "description": "Handle communication with AllAccessOne nodes",
   "main": "dist/torusUtils.cjs.js",
   "module": "dist/torusUtils.esm.js",
   "unpkg": "dist/torusUtils.umd.min.js",
@@ -74,7 +74,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/torusresearch/torus.js.git"
+    "url": "git+https://github.com/AllAccessOne/allaccessone.js.git"
   },
   "keywords": [
     "torus.js",
