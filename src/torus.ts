@@ -1,13 +1,6 @@
 import { decrypt, generatePrivate, getPublic } from "@toruslabs/eccrypto";
 import type { INodePub } from "@toruslabs/fetch-node-details";
-import {
-  Data,
-  generateJsonRPCObject,
-  get,
-  post,
-  setAPIKey,
-  setEmbedHost,
-} from "@toruslabs/http-helpers";
+import { Data, generateJsonRPCObject, get, post, setAPIKey, setEmbedHost } from "@toruslabs/http-helpers";
 import BN from "bn.js";
 import { curve, ec as EC } from "elliptic";
 import stringify from "json-stable-stringify";
@@ -28,15 +21,7 @@ import {
 } from "./interfaces";
 import log from "./loglevel";
 import { Some } from "./some";
-import {
-  GetOrSetNonceError,
-  kCombinations,
-  keccak256,
-  keyAssign,
-  keyLookup,
-  thresholdSame,
-  waitKeyLookup,
-} from "./utils";
+import { GetOrSetNonceError, kCombinations, keccak256, keyAssign, keyLookup, thresholdSame, waitKeyLookup } from "./utils";
 
 // Implement threshold logic wrappers around public APIs
 // of Torus nodes to handle malicious node responses
@@ -98,24 +83,15 @@ class Torus {
     { verifier, verifierId }: { verifier: string; verifierId: string },
     doesKeyAssign = false
   ): Promise<TorusPublicKey> {
-    const { keyResult, errorResult } =
-      (await keyLookup(endpoints, verifier, verifierId)) || {};
+    const { keyResult, errorResult } = (await keyLookup(endpoints, verifier, verifierId)) || {};
     let isNewKey = false;
     let finalKeyResult: VerifierLookupResponse;
-    if (
-      errorResult &&
-      JSON.stringify(errorResult).includes("Verifier not supported")
-    ) {
+    if (errorResult && JSON.stringify(errorResult).includes("Verifier not supported")) {
       // change error msg
       throw new Error(`Verifier not supported. Check if you: \n
       1. Are on the right network (Torus testnet/mainnet) \n
       2. Have setup a verifier on dashboard.web3auth.io?`);
-    } else if (
-      errorResult &&
-      JSON.stringify(errorResult).includes(
-        "Verifier + VerifierID has not yet been assigned"
-      )
-    ) {
+    } else if (errorResult && JSON.stringify(errorResult).includes("Verifier + VerifierID has not yet been assigned")) {
       if (!doesKeyAssign) {
         throw new Error("Verifier + VerifierID has not yet been assigned");
       }
@@ -129,22 +105,13 @@ class Torus {
         signerHost: this.signerHost,
         network: this.network,
       });
-      const assignResult = await waitKeyLookup(
-        endpoints,
-        verifier,
-        verifierId,
-        1000
-      );
+      const assignResult = await waitKeyLookup(endpoints, verifier, verifierId, 1000);
       finalKeyResult = assignResult?.keyResult;
       isNewKey = true;
     } else if (keyResult) {
       finalKeyResult = keyResult;
     } else {
-      throw new Error(
-        `node results do not match at first lookup ${JSON.stringify(
-          keyResult || {}
-        )}, ${JSON.stringify(errorResult || {})}`
-      );
+      throw new Error(`node results do not match at first lookup ${JSON.stringify(keyResult || {})}, ${JSON.stringify(errorResult || {})}`);
     }
     log.debug("> torus.js/getUserTypeAndAddress", { finalKeyResult, isNewKey });
 
@@ -188,10 +155,7 @@ class Torus {
 
       const finalX = modifiedPubKey.getX().toString(16);
       const finalY = modifiedPubKey.getY().toString(16);
-      const address = this.generateAddressFromPubKey(
-        modifiedPubKey.getX(),
-        modifiedPubKey.getY()
-      );
+      const address = this.generateAddressFromPubKey(modifiedPubKey.getX(), modifiedPubKey.getY());
       log.debug("> torus.js/getUserTypeAndAddress", {
         X,
         Y,
@@ -207,23 +171,13 @@ class Torus {
         Y: finalY,
         metadataNonce: nonce,
         pubNonce,
-        upgraded:
-          (nonceResult as { upgraded?: boolean })?.upgraded || undefined,
+        upgraded: (nonceResult as { upgraded?: boolean })?.upgraded || undefined,
       };
     }
-    throw new Error(
-      `node results do not match at final lookup ${JSON.stringify(
-        keyResult || {}
-      )}, ${JSON.stringify(errorResult || {})}`
-    );
+    throw new Error(`node results do not match at final lookup ${JSON.stringify(keyResult || {})}, ${JSON.stringify(errorResult || {})}`);
   }
 
-  async setCustomKey({
-    privKeyHex,
-    metadataNonce,
-    torusKeyHex,
-    customKeyHex,
-  }: SetCustomKeyOptions): Promise<void> {
+  async setCustomKey({ privKeyHex, metadataNonce, torusKeyHex, customKeyHex }: SetCustomKeyOptions): Promise<void> {
     let torusKey: BN;
     if (torusKeyHex) {
       torusKey = new BN(torusKeyHex, 16);
@@ -233,10 +187,7 @@ class Torus {
     }
     const customKey = new BN(customKeyHex, 16);
     const newMetadataNonce = customKey.sub(torusKey).umod(this.ec.curve.n);
-    const data = this.generateMetadataParams(
-      newMetadataNonce.toString(16),
-      torusKey
-    );
+    const data = this.generateMetadataParams(newMetadataNonce.toString(16), torusKey);
     await this.setMetadata(data);
   }
 
@@ -286,10 +237,7 @@ class Torus {
         temppuby: pubKeyY,
         verifieridentifier: verifier,
       });
-      const p = post<JRPCResponse<CommitmentRequestResult>>(
-        endpoints[i],
-        object
-      ).catch((err) => {
+      const p = post<JRPCResponse<CommitmentRequestResult>>(endpoints[i], object).catch((err) => {
         log.error("commitment", err);
       });
       promiseArr.push(p);
@@ -317,10 +265,7 @@ class Torus {
       }
       */
     // send share request once k + t number of commitment requests have completed
-    return Some<
-      void | JRPCResponse<CommitmentRequestResult>,
-      (void | JRPCResponse<CommitmentRequestResult>)[]
-    >(promiseArr, (resultArr) => {
+    return Some<void | JRPCResponse<CommitmentRequestResult>, (void | JRPCResponse<CommitmentRequestResult>)[]>(promiseArr, (resultArr) => {
       const completedRequests = resultArr.filter((x) => {
         if (!x || typeof x !== "object") {
           return false;
@@ -336,14 +281,11 @@ class Torus {
       return Promise.reject(new Error(`invalid ${JSON.stringify(resultArr)}`));
     })
       .then((responses) => {
-        const promiseArrRequest: Promise<void | JRPCResponse<ShareRequestResult>>[] =
-          [];
+        const promiseArrRequest: Promise<void | JRPCResponse<ShareRequestResult>>[] = [];
         const nodeSigs = [];
         for (let i = 0; i < responses.length; i += 1) {
           if (responses[i]) {
-            const { result } = responses[
-              i
-            ] as JRPCResponse<CommitmentRequestResult>;
+            const { result } = responses[i] as JRPCResponse<CommitmentRequestResult>;
             nodeSigs.push(result);
           }
         }
@@ -360,16 +302,11 @@ class Torus {
               },
             ],
           });
-          const p = post<JRPCResponse<ShareRequestResult>>(
-            endpoints[i],
-            object
-          ).catch((err) => log.error("share req", err));
+          const p = post<JRPCResponse<ShareRequestResult>>(endpoints[i], object).catch((err) => log.error("share req", err));
           promiseArrRequest.push(p);
         }
-        return Some<void | JRPCResponse<ShareRequestResult>, BN | undefined>(
-          promiseArrRequest,
-          async (shareResponses, sharedState) => {
-            /*
+        return Some<void | JRPCResponse<ShareRequestResult>, BN | undefined>(promiseArrRequest, async (shareResponses, sharedState) => {
+          /*
               ShareRequestResult struct {
                 Keys []KeyAssignment
               }
@@ -387,137 +324,92 @@ class Torus {
                 Share big.Int // Or Si
               }
             */
-            // check if threshold number of nodes have returned the same user public key
-            const completedRequests = shareResponses.filter((x) => x);
-            const thresholdPublicKey = thresholdSame(
-              shareResponses.map(
-                (x) => x && x.result && x.result.keys[0].PublicKey
-              ),
-              ~~(endpoints.length / 2) + 1
-            );
-            // optimistically run lagrange interpolation once threshold number of shares have been received
-            // this is matched against the user public key to ensure that shares are consistent
-            if (
-              completedRequests.length >= ~~(endpoints.length / 2) + 1 &&
-              thresholdPublicKey
-            ) {
-              const sharePromises: Promise<void | Buffer>[] = [];
-              const nodeIndexes: BN[] = [];
-              for (let i = 0; i < shareResponses.length; i += 1) {
-                const currentShareResponse = shareResponses[
-                  i
-                ] as JRPCResponse<ShareRequestResult>;
-                if (currentShareResponse?.result?.keys?.length > 0) {
-                  currentShareResponse.result.keys.sort((a, b) =>
-                    new BN(a.Index, 16).cmp(new BN(b.Index, 16))
+          // check if threshold number of nodes have returned the same user public key
+          const completedRequests = shareResponses.filter((x) => x);
+          const thresholdPublicKey = thresholdSame(
+            shareResponses.map((x) => x && x.result && x.result.keys[0].PublicKey),
+            ~~(endpoints.length / 2) + 1
+          );
+          // optimistically run lagrange interpolation once threshold number of shares have been received
+          // this is matched against the user public key to ensure that shares are consistent
+          if (completedRequests.length >= ~~(endpoints.length / 2) + 1 && thresholdPublicKey) {
+            const sharePromises: Promise<void | Buffer>[] = [];
+            const nodeIndexes: BN[] = [];
+            for (let i = 0; i < shareResponses.length; i += 1) {
+              const currentShareResponse = shareResponses[i] as JRPCResponse<ShareRequestResult>;
+              if (currentShareResponse?.result?.keys?.length > 0) {
+                currentShareResponse.result.keys.sort((a, b) => new BN(a.Index, 16).cmp(new BN(b.Index, 16)));
+                const firstKey = currentShareResponse.result.keys[0];
+                if (firstKey.Metadata) {
+                  const metadata = {
+                    ephemPublicKey: Buffer.from(firstKey.Metadata.ephemPublicKey, "hex"),
+                    iv: Buffer.from(firstKey.Metadata.iv, "hex"),
+                    mac: Buffer.from(firstKey.Metadata.mac, "hex"),
+                    // mode: Buffer.from(firstKey.Metadata.mode, "hex"),
+                  };
+                  sharePromises.push(
+                    decrypt(tmpKey, {
+                      ...metadata,
+                      ciphertext: Buffer.from(Buffer.from(firstKey.Share, "base64").toString("binary").padStart(64, "0"), "hex"),
+                    }).catch((err) => log.debug("share decryption", err))
                   );
-                  const firstKey = currentShareResponse.result.keys[0];
-                  if (firstKey.Metadata) {
-                    const metadata = {
-                      ephemPublicKey: Buffer.from(
-                        firstKey.Metadata.ephemPublicKey,
-                        "hex"
-                      ),
-                      iv: Buffer.from(firstKey.Metadata.iv, "hex"),
-                      mac: Buffer.from(firstKey.Metadata.mac, "hex"),
-                      // mode: Buffer.from(firstKey.Metadata.mode, "hex"),
-                    };
-                    sharePromises.push(
-                      decrypt(tmpKey, {
-                        ...metadata,
-                        ciphertext: Buffer.from(
-                          Buffer.from(firstKey.Share, "base64")
-                            .toString("binary")
-                            .padStart(64, "0"),
-                          "hex"
-                        ),
-                      }).catch((err) => log.debug("share decryption", err))
-                    );
-                  } else {
-                    sharePromises.push(
-                      Promise.resolve(
-                        Buffer.from(firstKey.Share.padStart(64, "0"), "hex")
-                      )
-                    );
-                  }
                 } else {
-                  sharePromises.push(Promise.resolve(undefined));
+                  sharePromises.push(Promise.resolve(Buffer.from(firstKey.Share.padStart(64, "0"), "hex")));
                 }
-                nodeIndexes.push(new BN(indexes[i], 16));
+              } else {
+                sharePromises.push(Promise.resolve(undefined));
               }
-              const sharesResolved = await Promise.all(sharePromises);
-              if (sharedState.resolved) return undefined;
-
-              const decryptedShares = sharesResolved.reduce(
-                (acc, curr, index) => {
-                  if (curr)
-                    acc.push({
-                      index: nodeIndexes[index],
-                      value: new BN(curr),
-                    });
-                  return acc;
-                },
-                [] as { index: BN; value: BN }[]
-              );
-              // run lagrange interpolation on all subsets, faster in the optimistic scenario than berlekamp-welch due to early exit
-              const allCombis = kCombinations(
-                decryptedShares.length,
-                ~~(endpoints.length / 2) + 1
-              );
-              let privateKey: BN | null = null;
-              for (let j = 0; j < allCombis.length; j += 1) {
-                const currentCombi = allCombis[j];
-                const currentCombiShares = decryptedShares.filter((v, index) =>
-                  currentCombi.includes(index)
-                );
-                const shares = currentCombiShares.map((x) => x.value);
-                const indices = currentCombiShares.map((x) => x.index);
-                const derivedPrivateKey = this.lagrangeInterpolation(
-                  shares,
-                  indices
-                );
-                if (!derivedPrivateKey) continue;
-                const decryptedPubKey = getPublic(
-                  Buffer.from(derivedPrivateKey.toString(16, 64), "hex")
-                ).toString("hex");
-                const decryptedPubKeyX = decryptedPubKey.slice(2, 66);
-                const decryptedPubKeyY = decryptedPubKey.slice(66);
-                if (
-                  new BN(decryptedPubKeyX, 16).cmp(
-                    new BN(thresholdPublicKey.X, 16)
-                  ) === 0 &&
-                  new BN(decryptedPubKeyY, 16).cmp(
-                    new BN(thresholdPublicKey.Y, 16)
-                  ) === 0
-                ) {
-                  privateKey = derivedPrivateKey;
-                  break;
-                }
-              }
-              if (privateKey === undefined || privateKey === null) {
-                throw new Error("could not derive private key");
-              }
-              return privateKey;
+              nodeIndexes.push(new BN(indexes[i], 16));
             }
-            throw new Error("invalid");
+            const sharesResolved = await Promise.all(sharePromises);
+            if (sharedState.resolved) return undefined;
+
+            const decryptedShares = sharesResolved.reduce((acc, curr, index) => {
+              if (curr)
+                acc.push({
+                  index: nodeIndexes[index],
+                  value: new BN(curr),
+                });
+              return acc;
+            }, [] as { index: BN; value: BN }[]);
+            // run lagrange interpolation on all subsets, faster in the optimistic scenario than berlekamp-welch due to early exit
+            const allCombis = kCombinations(decryptedShares.length, ~~(endpoints.length / 2) + 1);
+            let privateKey: BN | null = null;
+            for (let j = 0; j < allCombis.length; j += 1) {
+              const currentCombi = allCombis[j];
+              const currentCombiShares = decryptedShares.filter((v, index) => currentCombi.includes(index));
+              const shares = currentCombiShares.map((x) => x.value);
+              const indices = currentCombiShares.map((x) => x.index);
+              const derivedPrivateKey = this.lagrangeInterpolation(shares, indices);
+              if (!derivedPrivateKey) continue;
+              const decryptedPubKey = getPublic(Buffer.from(derivedPrivateKey.toString(16, 64), "hex")).toString("hex");
+              const decryptedPubKeyX = decryptedPubKey.slice(2, 66);
+              const decryptedPubKeyY = decryptedPubKey.slice(66);
+              if (
+                new BN(decryptedPubKeyX, 16).cmp(new BN(thresholdPublicKey.X, 16)) === 0 &&
+                new BN(decryptedPubKeyY, 16).cmp(new BN(thresholdPublicKey.Y, 16)) === 0
+              ) {
+                privateKey = derivedPrivateKey;
+                break;
+              }
+            }
+            if (privateKey === undefined || privateKey === null) {
+              throw new Error("could not derive private key");
+            }
+            return privateKey;
           }
-        );
+          throw new Error("invalid");
+        });
       })
       .then(async (returnedKey) => {
         let privateKey = returnedKey;
         if (!privateKey) throw new Error("Invalid private key returned");
-        const decryptedPubKey = getPublic(
-          Buffer.from(privateKey.toString(16, 64), "hex")
-        ).toString("hex");
+        const decryptedPubKey = getPublic(Buffer.from(privateKey.toString(16, 64), "hex")).toString("hex");
         const decryptedPubKeyX = decryptedPubKey.slice(2, 66);
         const decryptedPubKeyY = decryptedPubKey.slice(66);
         let metadataNonce: BN;
         if (this.enableOneKey) {
-          const { nonce } = await this.getNonce(
-            decryptedPubKeyX,
-            decryptedPubKeyY,
-            privateKey
-          );
+          const { nonce } = await this.getNonce(decryptedPubKeyX, decryptedPubKeyY, privateKey);
           metadataNonce = new BN(nonce || "0", 16);
         } else {
           metadataNonce = await this.getMetadata({
@@ -547,17 +439,9 @@ class Torus {
       });
   }
 
-  async getMetadata(
-    data: Omit<MetadataParams, "set_data" | "signature">,
-    options: RequestInit = {}
-  ): Promise<BN> {
+  async getMetadata(data: Omit<MetadataParams, "set_data" | "signature">, options: RequestInit = {}): Promise<BN> {
     try {
-      const metadataResponse = await post<{ message?: string }>(
-        `${this.metadataHost}/get`,
-        data,
-        options,
-        { useAPIKey: true }
-      );
+      const metadataResponse = await post<{ message?: string }>(`${this.metadataHost}/get`, data, options, { useAPIKey: true });
       if (!metadataResponse || !metadataResponse.message) {
         return new BN(0);
       }
@@ -572,35 +456,20 @@ class Torus {
     const key = this.ec.keyFromPrivate(privateKey.toString("hex", 64));
     const setData = {
       data: message,
-      timestamp: new BN(~~(this.serverTimeOffset + Date.now() / 1000)).toString(
-        16
-      ),
+      timestamp: new BN(~~(this.serverTimeOffset + Date.now() / 1000)).toString(16),
     };
     const sig = key.sign(keccak256(stringify(setData)).slice(2));
     return {
       pub_key_X: key.getPublic().getX().toString("hex"),
       pub_key_Y: key.getPublic().getY().toString("hex"),
       set_data: setData,
-      signature: Buffer.from(
-        sig.r.toString(16, 64) +
-          sig.s.toString(16, 64) +
-          new BN("").toString(16, 2),
-        "hex"
-      ).toString("base64"),
+      signature: Buffer.from(sig.r.toString(16, 64) + sig.s.toString(16, 64) + new BN("").toString(16, 2), "hex").toString("base64"),
     };
   }
 
-  async setMetadata(
-    data: MetadataParams,
-    options: RequestInit = {}
-  ): Promise<string> {
+  async setMetadata(data: MetadataParams, options: RequestInit = {}): Promise<string> {
     try {
-      const metadataResponse = await post<{ message: string }>(
-        `${this.metadataHost}/set`,
-        data,
-        options,
-        { useAPIKey: true }
-      );
+      const metadataResponse = await post<{ message: string }>(`${this.metadataHost}/set`, data, options, { useAPIKey: true });
       return metadataResponse.message; // IPFS hash
     } catch (error) {
       log.error("set metadata error", error);
@@ -636,9 +505,7 @@ class Torus {
     const key = this.ec.keyFromPrivate(privateKey.toString("hex", 64), "hex");
     const publicKey = key.getPublic().encode("hex", false).slice(2);
     log.info(publicKey, "public key");
-    const ethAddressLower = `0x${keccak256(Buffer.from(publicKey, "hex")).slice(
-      64 - 38
-    )}`;
+    const ethAddressLower = `0x${keccak256(Buffer.from(publicKey, "hex")).slice(64 - 38)}`;
     return toChecksumAddress(ethAddressLower);
   }
 
@@ -649,9 +516,7 @@ class Torus {
     });
     const publicKey = key.getPublic().encode("hex", false).slice(2);
     log.info(key.getPublic().encode("hex", false), "public key");
-    const ethAddressLower = `0x${keccak256(Buffer.from(publicKey, "hex")).slice(
-      64 - 38
-    )}`;
+    const ethAddressLower = `0x${keccak256(Buffer.from(publicKey, "hex")).slice(64 - 38)}`;
     return toChecksumAddress(ethAddressLower);
   }
 
@@ -675,22 +540,13 @@ class Torus {
     let finalKeyResult: VerifierLookupResponse | undefined;
     let isNewKey = false;
 
-    const { keyResult, errorResult } =
-      (await keyLookup(endpoints, verifier, verifierId)) || {};
-    if (
-      errorResult &&
-      JSON.stringify(errorResult).includes("Verifier not supported")
-    ) {
+    const { keyResult, errorResult } = (await keyLookup(endpoints, verifier, verifierId)) || {};
+    if (errorResult && JSON.stringify(errorResult).includes("Verifier not supported")) {
       // change error msg
       throw new Error(`Verifier not supported. Check if you: \n
       1. Are on the right network (Torus testnet/mainnet) \n
       2. Have setup a verifier on dashboard.web3auth.io?`);
-    } else if (
-      errorResult &&
-      JSON.stringify(errorResult).includes(
-        "Verifier + VerifierID has not yet been assigned"
-      )
-    ) {
+    } else if (errorResult && JSON.stringify(errorResult).includes("Verifier + VerifierID has not yet been assigned")) {
       await keyAssign({
         endpoints,
         torusNodePubs,
@@ -701,22 +557,13 @@ class Torus {
         signerHost: this.signerHost,
         network: this.network,
       });
-      const assignResult = await waitKeyLookup(
-        endpoints,
-        verifier,
-        verifierId,
-        1000
-      );
+      const assignResult = await waitKeyLookup(endpoints, verifier, verifierId, 1000);
       finalKeyResult = assignResult?.keyResult;
       isNewKey = true;
     } else if (keyResult) {
       finalKeyResult = keyResult;
     } else {
-      throw new Error(
-        `node results do not match at first lookup ${JSON.stringify(
-          keyResult || {}
-        )}, ${JSON.stringify(errorResult || {})}`
-      );
+      throw new Error(`node results do not match at first lookup ${JSON.stringify(keyResult || {})}, ${JSON.stringify(errorResult || {})}`);
     }
     log.debug("> torus.js/getPublicAddress", { finalKeyResult, isNewKey });
 
@@ -773,10 +620,7 @@ class Torus {
       X = modifiedPubKey.getX().toString(16);
       Y = modifiedPubKey.getY().toString(16);
 
-      const address = this.generateAddressFromPubKey(
-        modifiedPubKey.getX(),
-        modifiedPubKey.getY()
-      );
+      const address = this.generateAddressFromPubKey(modifiedPubKey.getX(), modifiedPubKey.getY());
       log.debug("> torus.js/getPublicAddress", {
         X,
         Y,
@@ -794,27 +638,17 @@ class Torus {
         Y,
         metadataNonce: nonce,
         pubNonce,
-        upgraded:
-          (nonceResult as { upgraded?: boolean })?.upgraded || undefined,
+        upgraded: (nonceResult as { upgraded?: boolean })?.upgraded || undefined,
       };
     }
-    throw new Error(
-      `node results do not match at final lookup ${JSON.stringify(
-        keyResult || {}
-      )}, ${JSON.stringify(errorResult || {})}`
-    );
+    throw new Error(`node results do not match at final lookup ${JSON.stringify(keyResult || {})}, ${JSON.stringify(errorResult || {})}`);
   }
 
   /**
    * Internal functions for OneKey (OpenLogin v2), only call these functions if you know what you're doing
    */
 
-  async getOrSetNonce(
-    X: string,
-    Y: string,
-    privKey?: BN,
-    getOnly = false
-  ): Promise<GetOrSetNonceResult> {
+  async getOrSetNonce(X: string, Y: string, privKey?: BN, getOnly = false): Promise<GetOrSetNonceResult> {
     let data: Data;
     const msg = getOnly ? "getNonce" : "getOrSetNonce";
     if (privKey) {
@@ -826,19 +660,10 @@ class Torus {
         set_data: { data: msg },
       };
     }
-    return post<GetOrSetNonceResult>(
-      `${this.metadataHost}/get_or_set_nonce`,
-      data,
-      undefined,
-      { useAPIKey: true }
-    );
+    return post<GetOrSetNonceResult>(`${this.metadataHost}/get_or_set_nonce`, data, undefined, { useAPIKey: true });
   }
 
-  async getNonce(
-    X: string,
-    Y: string,
-    privKey?: BN
-  ): Promise<GetOrSetNonceResult> {
+  async getNonce(X: string, Y: string, privKey?: BN): Promise<GetOrSetNonceResult> {
     return this.getOrSetNonce(X, Y, privKey, true);
   }
 
