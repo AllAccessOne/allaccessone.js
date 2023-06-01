@@ -89,9 +89,9 @@
   "author": "Chaitanya Potti",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/torusresearch/torus.js/issues"
+    "url": "https://github.com/AllAccessOne/allaccessone.js/issues"
   },
-  "homepage": "https://github.com/torusresearch/torus.js#readme",
+  "homepage": "https://github.com/AllAccessOne/allaccessone.js#readme",
   "lint-staged": {
     "!(*d).{js,ts}": [
       "eslint --cache --fix",
