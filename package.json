@@ -1,6 +1,6 @@
 {
   "name": "@allaccessone/allaccessone.js",
-  "version": "6.3.3",
+  "version": "6.3.4",
   "description": "Handle communication with AllAccessOne nodes",
   "main": "dist/torusUtils.cjs.js",
   "module": "dist/torusUtils.esm.js",
